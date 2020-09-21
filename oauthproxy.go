@@ -71,6 +71,7 @@ type OAuthProxy struct {
 	UserInfoPath      string
 
 	redirectURL             *url.URL // the url to receive requests at
+	redirectPreserveHost	bool
 	whitelistDomains        []string
 	provider                providers.Provider
 	providerNameOverride    string
@@ -191,6 +192,7 @@ func NewOAuthProxy(opts *options.Options, validator func(string) bool) (*OAuthPr
 		sessionStore:            sessionStore,
 		serveMux:                upstreamProxy,
 		redirectURL:             redirectURL,
+		redirectPreserveHost:	 opts.RedirectPreserveHost,
 		whitelistDomains:        opts.WhitelistDomains,
 		skipAuthRegex:           opts.SkipAuthRegex,
 		skipAuthPreflight:       opts.SkipAuthPreflight,
@@ -496,8 +498,23 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 	if !p.IsValidRedirect(redirect) {
 		// Use RequestURI to preserve ?query
 		redirect = req.URL.RequestURI()
+
+		// Preserve host in redirectURL if enabled
+		host := ""
+		if p.redirectPreserveHost {
+
+			// Assume scheme from CookieSecure option
+			scheme := httpScheme
+			if p.CookieSecure {
+				scheme = httpsScheme
+			}
+			host = scheme + "://" + req.Host
+		}
+
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {
-			redirect = "/"
+			redirect = host + "/"
+		} else {
+			redirect = host + redirect
 		}
 	}
 
