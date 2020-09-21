@@ -508,7 +508,9 @@ func (p *OAuthProxy) GetRedirect(req *http.Request) (redirect string, err error)
 			if p.CookieSecure {
 				scheme = httpsScheme
 			}
-			host = scheme + "://" + req.Host
+			if p.IsValidRedirect(scheme + "://" + req.Host) {
+				host = scheme + "://" + req.Host
+			}
 		}
 
 		if strings.HasPrefix(redirect, p.ProxyPrefix) {
